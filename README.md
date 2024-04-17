@@ -2,9 +2,8 @@
 Contant - A GPT-4 console Assistant
 
 A minimalistic sample console app of an OpenAI GPT-4 assistant, equipped with a function to search the internet (via SERPAPI).
-The code assumes you know how to create an assistant and putting functions on it.
 I wrote this because I was learning about function calling on the assistant API, so it's just a rough sample.
-
+The code assumes you know how to create an assistant and putting functions on it.
 If not, maybe this helps:
 
 ```
