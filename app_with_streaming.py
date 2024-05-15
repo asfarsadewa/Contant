@@ -26,6 +26,7 @@ class EventHandler(AssistantEventHandler):
         self.thread_id = thread_id
         self.is_tool_call_active = False
         self.first_response = True
+        self.function_call_args_buffer = ""
 
     @override
     def on_text_created(self, text) -> None:
@@ -42,10 +43,14 @@ class EventHandler(AssistantEventHandler):
     def on_tool_call_created(self, tool_call):
         print(f"{assistant.name}: {tool_call.type}", flush=True)
         self.is_tool_call_active = True
+        self.function_call_args_buffer = ""  # Reset the buffer for new tool calls
 
     @override
     def on_tool_call_delta(self, delta, snapshot):
-        if delta.type == 'code_interpreter':
+        if delta.type == 'function':
+            if hasattr(delta.function, 'arguments') and delta.function.arguments:
+                self.function_call_args_buffer += delta.function.arguments
+        elif delta.type == 'code_interpreter':
             if delta.code_interpreter.input:
                 print(delta.code_interpreter.input, end="", flush=True)
             if delta.code_interpreter.outputs:
@@ -65,7 +70,8 @@ class EventHandler(AssistantEventHandler):
 
         for tool_call in data.required_action.submit_tool_outputs.tool_calls:
             if tool_call.function.name == "searchInternet":
-                query = json.loads(tool_call.function.arguments)["query"]
+                # Use accumulated arguments
+                query = json.loads(self.function_call_args_buffer)["query"]
                 output = searchInternet(query)
                 tool_outputs.append({"tool_call_id": tool_call.id, "output": json.dumps({"results": output})})
 
@@ -82,7 +88,7 @@ class EventHandler(AssistantEventHandler):
         ) as stream:
             stream.until_done()
             print()
-        
+
 def submit_user_message(assistant_id, thread, user_message):
     client.beta.threads.messages.create(
         thread_id=thread.id, role="user", content=user_message
