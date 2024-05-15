@@ -24,14 +24,13 @@ class EventHandler(AssistantEventHandler):
     def __init__(self, thread_id):
         super().__init__()
         self.thread_id = thread_id
-        self.is_tool_call_active = False
         self.first_response = True
         self.function_call_args_buffer = ""
 
     @override
     def on_text_created(self, text) -> None:
         if self.first_response:
-            print()  # Add a new line before the assistant's first response
+            print()
             self.first_response = False
         print(f"{assistant.name}: ", end="", flush=True)
 
@@ -42,8 +41,7 @@ class EventHandler(AssistantEventHandler):
     @override
     def on_tool_call_created(self, tool_call):
         print(f"{assistant.name}: {tool_call.type}", flush=True)
-        self.is_tool_call_active = True
-        self.function_call_args_buffer = ""  # Reset the buffer for new tool calls
+        self.function_call_args_buffer = ""
 
     @override
     def on_tool_call_delta(self, delta, snapshot):
@@ -67,18 +65,14 @@ class EventHandler(AssistantEventHandler):
 
     def handle_requires_action(self, data, run_id):
         tool_outputs = []
-
         for tool_call in data.required_action.submit_tool_outputs.tool_calls:
             if tool_call.function.name == "searchInternet":
-                # Use accumulated arguments
                 query = json.loads(self.function_call_args_buffer)["query"]
                 output = searchInternet(query)
                 tool_outputs.append({"tool_call_id": tool_call.id, "output": json.dumps({"results": output})})
-
         self.submit_tool_outputs(tool_outputs, run_id)
 
     def submit_tool_outputs(self, tool_outputs, run_id):
-        # Create a separate EventHandler instance for this stream
         new_event_handler = EventHandler(self.thread_id)
         with client.beta.threads.runs.submit_tool_outputs_stream(
             thread_id=self.thread_id,
